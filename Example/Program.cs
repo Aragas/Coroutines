@@ -1,29 +1,30 @@
-﻿using System;
+﻿using Coroutines;
+
+using System;
 using System.Collections;
 using System.Diagnostics;
-using Coroutines;
 
 namespace Example
 {
     // Here's a silly example animating a little roguelike-style character moving.
-    class Program
+    public class Program
     {
         public static void Main(string[] args)
         {
-            //Timer variables to run the update loop at 30 fps
+            //Timer variables to run the update loop at 10 fps
             var watch = Stopwatch.StartNew();
-            const float updateRate = 1f / 30f;
-            float prevTime = watch.ElapsedMilliseconds / 1000f;
-            float accumulator = 0f;
+            const float updateRate = 1f / 10f;
+            var prevTime = watch.ElapsedMilliseconds / 1000f;
+            var accumulator = 0f;
 
             //The little @ character's position
-            int px = 0;
-            int py = 0;
+            var px = 0;
+            var py = 0;
 
             //Routine to move horizontally
             IEnumerator MoveX(int amount, float stepTime)
             {
-                int dir = amount > 0 ? 1 : -1;
+                var dir = amount > 0 ? 1 : -1;
                 while (amount != 0)
                 {
                     yield return stepTime;
@@ -35,7 +36,7 @@ namespace Example
             //Routine to move vertically
             IEnumerator MoveY(int amount, float stepTime)
             {
-                int dir = amount > 0 ? 1 : -1;
+                var dir = amount > 0 ? 1 : -1;
                 while (amount != 0)
                 {
                     yield return stepTime;
@@ -66,9 +67,9 @@ namespace Example
             void DrawMap()
             {
                 Console.Clear();
-                for (int y = 0; y < 16; ++y)
+                for (var y = 0; y < 16; ++y)
                 {
-                    for (int x = 0; x < 16; ++x)
+                    for (var x = 0; x < 16; ++x)
                     {
                         if (x == px && y == py)
                             Console.Write('@');
@@ -87,11 +88,11 @@ namespace Example
             while (moving.IsRunning)
             {
                 //Track time
-                float currTime = watch.ElapsedMilliseconds / 1000f;
+                var currTime = watch.ElapsedMilliseconds / 1000f;
                 accumulator += currTime - prevTime;
                 prevTime = currTime;
 
-                //Update at our requested rate (30 fps)
+                //Update at our requested rate (10 fps)
                 if (accumulator > updateRate)
                 {
                     accumulator -= updateRate;
