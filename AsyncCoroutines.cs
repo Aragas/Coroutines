@@ -25,18 +25,18 @@ SOFTWARE.
 */
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Coroutines
 {
     /// <summary>
     /// A container for running multiple routines in parallel. Coroutines can be nested.
     /// </summary>
-    public class CoroutineRunner
+    public class AsyncCoroutineRunner
     {
-        private readonly List<IEnumerator> _running = new();
+        private readonly List<IAsyncEnumerator<object?>> _running = new();
         private readonly List<float> _delays = new();
 
         /// <summary>
@@ -50,11 +50,11 @@ namespace Coroutines
         /// <returns>A handle to the new coroutine.</returns>
         /// <param name="delay">How many seconds to delay before starting.</param>
         /// <param name="routine">The routine to run.</param>
-        public CoroutineHandle Run(float delay, IEnumerator routine)
+        public ValueTask<AsyncCoroutineHandle> RunAsync(float delay, IAsyncEnumerator<object?> routine)
         {
             _running.Add(routine);
             _delays.Add(delay);
-            return new CoroutineHandle(this, routine);
+            return ValueTask.FromResult(new AsyncCoroutineHandle(this, routine));
         }
 
         /// <summary>
@@ -62,21 +62,21 @@ namespace Coroutines
         /// </summary>
         /// <returns>A handle to the new coroutine.</returns>
         /// <param name="routine">The routine to run.</param>
-        public CoroutineHandle Run(IEnumerator routine) => Run(0f, routine);
+        public ValueTask<AsyncCoroutineHandle> RunAsync(IAsyncEnumerator<object?> routine) => RunAsync(0f, routine);
 
         /// <summary>
         /// Stop the specified routine.
         /// </summary>
         /// <returns>True if the routine was actually stopped.</returns>
         /// <param name="routine">The routine to stop.</param>
-        public bool Stop(IEnumerator routine)
+        public ValueTask<bool> StopAsync(IAsyncEnumerator<object?> routine)
         {
             var i = _running.IndexOf(routine);
             if (i < 0)
-                return false;
-            _running[i] = Enumerable.Empty<object>().GetEnumerator();
+                return ValueTask.FromResult(false);
+            _running[i] = AsyncEnumerable.Empty<object?>().GetAsyncEnumerator();
             _delays[i] = 0f;
-            return true;
+            return ValueTask.FromResult(true);
         }
 
         /// <summary>
@@ -84,15 +84,17 @@ namespace Coroutines
         /// </summary>
         /// <returns>True if the routine was actually stopped.</returns>
         /// <param name="routine">The routine to stop.</param>
-        public bool Stop(in CoroutineHandle routine) => routine.Stop();
+        public ValueTask<bool> StopAsync(in AsyncCoroutineHandle routine) => routine.StopAsync();
 
         /// <summary>
         /// Stop all running routines.
         /// </summary>
-        public void StopAll()
+        public ValueTask StopAllAsync()
         {
             _running.Clear();
             _delays.Clear();
+
+            return ValueTask.CompletedTask;
         }
 
         /// <summary>
@@ -100,21 +102,21 @@ namespace Coroutines
         /// </summary>
         /// <returns>True if the routine is running.</returns>
         /// <param name="routine">The routine to check.</param>
-        public bool IsRunning(IEnumerator routine) => _running.Contains(routine);
+        public ValueTask<bool> IsRunningAsync(IAsyncEnumerator<object?> routine) => ValueTask.FromResult(_running.Contains(routine));
 
         /// <summary>
         /// Check if the routine is currently running.
         /// </summary>
         /// <returns>True if the routine is running.</returns>
         /// <param name="routine">The routine to check.</param>
-        public bool IsRunning(in CoroutineHandle routine) => routine.IsRunning;
+        public ValueTask<bool> IsRunningAsync(in AsyncCoroutineHandle routine) => routine.IsRunningAsync;
 
         /// <summary>
         /// Update all running coroutines.
         /// </summary>
         /// <returns>True if any routines were updated.</returns>
         /// <param name="deltaTime">How many seconds have passed sinced the last update.</param>
-        public bool Update(float deltaTime)
+        public async ValueTask<bool> UpdateAsync(float deltaTime)
         {
             if (_running.Count > 0)
             {
@@ -122,7 +124,7 @@ namespace Coroutines
                 {
                     if (_delays[i] > 0f)
                         _delays[i] -= deltaTime;
-                    else if (_running[i] == null || !MoveNext(_running[i], i))
+                    else if (_running[i] == null || !await MoveNextAsync(_running[i], i))
                     {
                         _running.RemoveAt(i);
                         _delays.RemoveAt(i--);
@@ -133,17 +135,17 @@ namespace Coroutines
             return false;
         }
 
-        private bool MoveNext(IEnumerator routine, int index)
+        private async ValueTask<bool> MoveNextAsync(IAsyncEnumerator<object?> routine, int index)
         {
-            if (routine.Current is IEnumerator current)
+            if (routine.Current is IAsyncEnumerator<object?> current)
             {
-                if (MoveNext(current, index))
+                if (await MoveNextAsync(current, index))
                     return true;
 
                 _delays[index] = 0f;
             }
 
-            var result = routine.MoveNext();
+            var result = await routine.MoveNextAsync();
 
             if (routine.Current is float routineCurrent)
                 _delays[index] = routineCurrent;
@@ -155,29 +157,29 @@ namespace Coroutines
     /// <summary>
     /// A handle to a (potentially running) coroutine.
     /// </summary>
-    public readonly struct CoroutineHandle
+    public readonly struct AsyncCoroutineHandle
     {
         /// <summary>
         /// Reference to the routine's runner.
         /// </summary>
-        public readonly CoroutineRunner Runner;
+        public readonly AsyncCoroutineRunner Runner;
 
         /// <summary>
         /// Reference to the routine's enumerator.
         /// </summary>
-        public readonly IEnumerator Enumerator;
+        public readonly IAsyncEnumerator<object?> Enumerator;
 
         /// <summary>
         /// True if the enumerator is currently running.
         /// </summary>
-        public bool IsRunning => Runner.IsRunning(Enumerator);
+        public ValueTask<bool> IsRunningAsync => Runner.IsRunningAsync(Enumerator);
 
         /// <summary>
-        /// Construct a coroutine. Never call this manually, only use return values from Coroutines.Run().
+        /// Construct a coroutine. Never call this manually, only use return values from Coroutines.RunAsync().
         /// </summary>
         /// <param name="runner">The routine's runner.</param>
         /// <param name="enumerator">The routine's enumerator.</param>
-        internal CoroutineHandle(CoroutineRunner runner, IEnumerator enumerator)
+        internal AsyncCoroutineHandle(AsyncCoroutineRunner runner, IAsyncEnumerator<object?> enumerator)
         {
             Runner = runner ?? throw new ArgumentNullException(nameof(runner));
             Enumerator = enumerator ?? throw new ArgumentNullException(nameof(runner));
@@ -187,15 +189,15 @@ namespace Coroutines
         /// Stop this coroutine if it is running.
         /// </summary>
         /// <returns>True if the coroutine was stopped.</returns>
-        public bool Stop() => IsRunning && Runner.Stop(Enumerator);
+        public async ValueTask<bool> StopAsync() => await Runner.IsRunningAsync(Enumerator) && await Runner.StopAsync(Enumerator);
 
         /// <summary>
         /// A routine to wait until this coroutine has finished running.
         /// </summary>
         /// <returns>The wait enumerator.</returns>
-        public IEnumerator Wait()
+        public async IAsyncEnumerator<object?> WaitAsync()
         {
-            while (Runner.IsRunning(Enumerator))
+            while (await Runner.IsRunningAsync(Enumerator))
                 yield return null;
         }
     }

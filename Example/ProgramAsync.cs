@@ -1,15 +1,16 @@
 ﻿using Coroutines;
 
 using System;
-using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace Example
 {
     // Here's a silly example animating a little roguelike-style character moving.
-    public static class Program
+    public static class ProgramAsync
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             //Timer variables to run the update loop at 10 fps
             var watch = Stopwatch.StartNew();
@@ -22,7 +23,7 @@ namespace Example
             var py = 0;
 
             //Routine to move horizontally
-            IEnumerator MoveX(int amount, float stepTime)
+            async IAsyncEnumerator<object?> MoveXAsync(int amount, float stepTime)
             {
                 var dir = amount > 0 ? 1 : -1;
                 while (amount != 0)
@@ -34,7 +35,7 @@ namespace Example
             }
 
             //Routine to move vertically
-            IEnumerator MoveY(int amount, float stepTime)
+            async IAsyncEnumerator<object?> MoveYAsync(int amount, float stepTime)
             {
                 var dir = amount > 0 ? 1 : -1;
                 while (amount != 0)
@@ -46,21 +47,21 @@ namespace Example
             }
 
             //Walk the little @ character on a path
-            IEnumerator Movement()
+            async IAsyncEnumerator<object?> MovementAsync()
             {
                 //Walk normally
-                yield return MoveX(5, 0.25f);
-                yield return MoveY(5, 0.25f);
+                yield return MoveXAsync(5, 0.25f);
+                yield return MoveYAsync(5, 0.25f);
 
                 //Walk slowly
-                yield return MoveX(2, 0.5f);
-                yield return MoveY(2, 0.5f);
-                yield return MoveX(-2, 0.5f);
-                yield return MoveY(-2, 0.5f);
+                yield return MoveXAsync(2, 0.5f);
+                yield return MoveYAsync(2, 0.5f);
+                yield return MoveXAsync(-2, 0.5f);
+                yield return MoveYAsync(-2, 0.5f);
 
                 //Run fast
-                yield return MoveX(5, 0.1f);
-                yield return MoveY(5, 0.1f);
+                yield return MoveXAsync(5, 0.1f);
+                yield return MoveYAsync(5, 0.1f);
             }
 
             //Render a little map with the @ character in the console
@@ -81,11 +82,11 @@ namespace Example
             }
 
             //Run the coroutine
-            var runner = new CoroutineRunner();
-            var moving = runner.Run(Movement());
+            var runner = new AsyncCoroutineRunner();
+            var moving = await runner.RunAsync(MovementAsync());
 
             //Run the update loop until we've finished moving
-            while (moving.IsRunning)
+            while (await moving.IsRunningAsync)
             {
                 //Track time
                 var currTime = watch.ElapsedMilliseconds / 1000f;
@@ -96,7 +97,7 @@ namespace Example
                 if (accumulator > updateRate)
                 {
                     accumulator -= updateRate;
-                    runner.Update(updateRate);
+                    await runner.UpdateAsync(updateRate);
                     DrawMap();
                 }
             }

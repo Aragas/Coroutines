@@ -5,8 +5,13 @@
     <TargetFramework>net5</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>9.0</LangVersion>
+    <StartupObject>Example.ProgramAsync</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\Coroutines.cs" Link="Coroutines.cs" />
+    <Compile Include="..\AsyncCoroutines.cs" Link="AsyncCoroutines.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="System.Linq.Async" Version="5.0.0" />
   </ItemGroup>
 </Project>
