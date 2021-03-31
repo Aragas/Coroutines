@@ -5,6 +5,7 @@
     <TargetFramework>net5</TargetFramework>
     <Nullable>enable</Nullable>
     <LangVersion>9.0</LangVersion>
+    <StartupObject>Example.Program</StartupObject>
     <StartupObject>Example.ProgramAsync</StartupObject>
   </PropertyGroup>
   <ItemGroup>

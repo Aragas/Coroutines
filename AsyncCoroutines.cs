@@ -83,8 +83,8 @@ namespace Coroutines
         /// Stop the specified routine.
         /// </summary>
         /// <returns>True if the routine was actually stopped.</returns>
-        /// <param name="routine">The routine to stop.</param>
-        public ValueTask<bool> StopAsync(in AsyncCoroutineHandle routine) => routine.StopAsync();
+        /// <param name="handle">The routine to stop.</param>
+        public ValueTask<bool> StopAsync(in AsyncCoroutineHandle handle) => StopAsync(handle.Enumerator);
 
         /// <summary>
         /// Stop all running routines.
@@ -108,8 +108,8 @@ namespace Coroutines
         /// Check if the routine is currently running.
         /// </summary>
         /// <returns>True if the routine is running.</returns>
-        /// <param name="routine">The routine to check.</param>
-        public ValueTask<bool> IsRunningAsync(in AsyncCoroutineHandle routine) => routine.IsRunningAsync;
+        /// <param name="handle">The routine to check.</param>
+        public ValueTask<bool> IsRunningAsync(in AsyncCoroutineHandle handle) => IsRunningAsync(handle.Enumerator);
 
         /// <summary>
         /// Update all running coroutines.
@@ -162,17 +162,17 @@ namespace Coroutines
         /// <summary>
         /// Reference to the routine's runner.
         /// </summary>
-        public readonly AsyncCoroutineRunner Runner;
+        internal readonly AsyncCoroutineRunner Runner;
 
         /// <summary>
         /// Reference to the routine's enumerator.
         /// </summary>
-        public readonly IAsyncEnumerator<object?> Enumerator;
+        internal readonly IAsyncEnumerator<object?> Enumerator;
 
         /// <summary>
         /// True if the enumerator is currently running.
         /// </summary>
-        public ValueTask<bool> IsRunningAsync => Runner.IsRunningAsync(Enumerator);
+        public ValueTask<bool> IsRunningAsync => Runner.IsRunningAsync(in this);
 
         /// <summary>
         /// Construct a coroutine. Never call this manually, only use return values from Coroutines.RunAsync().
@@ -189,7 +189,7 @@ namespace Coroutines
         /// Stop this coroutine if it is running.
         /// </summary>
         /// <returns>True if the coroutine was stopped.</returns>
-        public async ValueTask<bool> StopAsync() => await Runner.IsRunningAsync(Enumerator) && await Runner.StopAsync(Enumerator);
+        public async ValueTask<bool> StopAsync() => await IsRunningAsync && await Runner.StopAsync(in this);
 
         /// <summary>
         /// A routine to wait until this coroutine has finished running.
@@ -197,7 +197,7 @@ namespace Coroutines
         /// <returns>The wait enumerator.</returns>
         public async IAsyncEnumerator<object?> WaitAsync()
         {
-            while (await Runner.IsRunningAsync(Enumerator))
+            while (await Runner.IsRunningAsync(in this))
                 yield return null;
         }
     }

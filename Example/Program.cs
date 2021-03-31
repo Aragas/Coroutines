@@ -1,7 +1,7 @@
 ﻿using Coroutines;
 
 using System;
-using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace Example
@@ -22,7 +22,7 @@ namespace Example
             var py = 0;
 
             //Routine to move horizontally
-            IEnumerator MoveX(int amount, float stepTime)
+            IEnumerator<object?> MoveX(int amount, float stepTime)
             {
                 var dir = amount > 0 ? 1 : -1;
                 while (amount != 0)
@@ -34,7 +34,7 @@ namespace Example
             }
 
             //Routine to move vertically
-            IEnumerator MoveY(int amount, float stepTime)
+            IEnumerator<object?> MoveY(int amount, float stepTime)
             {
                 var dir = amount > 0 ? 1 : -1;
                 while (amount != 0)
@@ -46,7 +46,7 @@ namespace Example
             }
 
             //Walk the little @ character on a path
-            IEnumerator Movement()
+            IEnumerator<object?> Movement()
             {
                 //Walk normally
                 yield return MoveX(5, 0.25f);

@@ -25,7 +25,6 @@ SOFTWARE.
 */
 
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -36,7 +35,7 @@ namespace Coroutines
     /// </summary>
     public class CoroutineRunner
     {
-        private readonly List<IEnumerator> _running = new();
+        private readonly List<IEnumerator<object?>> _running = new();
         private readonly List<float> _delays = new();
 
         /// <summary>
@@ -50,7 +49,7 @@ namespace Coroutines
         /// <returns>A handle to the new coroutine.</returns>
         /// <param name="delay">How many seconds to delay before starting.</param>
         /// <param name="routine">The routine to run.</param>
-        public CoroutineHandle Run(float delay, IEnumerator routine)
+        public CoroutineHandle Run(float delay, IEnumerator<object?> routine)
         {
             _running.Add(routine);
             _delays.Add(delay);
@@ -62,14 +61,14 @@ namespace Coroutines
         /// </summary>
         /// <returns>A handle to the new coroutine.</returns>
         /// <param name="routine">The routine to run.</param>
-        public CoroutineHandle Run(IEnumerator routine) => Run(0f, routine);
+        public CoroutineHandle Run(IEnumerator<object?> routine) => Run(0f, routine);
 
         /// <summary>
         /// Stop the specified routine.
         /// </summary>
         /// <returns>True if the routine was actually stopped.</returns>
         /// <param name="routine">The routine to stop.</param>
-        public bool Stop(IEnumerator routine)
+        public bool Stop(IEnumerator<object?> routine)
         {
             var i = _running.IndexOf(routine);
             if (i < 0)
@@ -83,8 +82,8 @@ namespace Coroutines
         /// Stop the specified routine.
         /// </summary>
         /// <returns>True if the routine was actually stopped.</returns>
-        /// <param name="routine">The routine to stop.</param>
-        public bool Stop(in CoroutineHandle routine) => routine.Stop();
+        /// <param name="handle">The routine to stop.</param>
+        public bool Stop(in CoroutineHandle handle) => Stop(handle.Enumerator);
 
         /// <summary>
         /// Stop all running routines.
@@ -100,14 +99,14 @@ namespace Coroutines
         /// </summary>
         /// <returns>True if the routine is running.</returns>
         /// <param name="routine">The routine to check.</param>
-        public bool IsRunning(IEnumerator routine) => _running.Contains(routine);
+        public bool IsRunning(IEnumerator<object?> routine) => _running.Contains(routine);
 
         /// <summary>
         /// Check if the routine is currently running.
         /// </summary>
         /// <returns>True if the routine is running.</returns>
-        /// <param name="routine">The routine to check.</param>
-        public bool IsRunning(in CoroutineHandle routine) => routine.IsRunning;
+        /// <param name="handle">The routine to check.</param>
+        public bool IsRunning(in CoroutineHandle handle) => IsRunning(handle.Enumerator);
 
         /// <summary>
         /// Update all running coroutines.
@@ -133,9 +132,9 @@ namespace Coroutines
             return false;
         }
 
-        private bool MoveNext(IEnumerator routine, int index)
+        private bool MoveNext(IEnumerator<object?> routine, int index)
         {
-            if (routine.Current is IEnumerator current)
+            if (routine.Current is IEnumerator<object?> current)
             {
                 if (MoveNext(current, index))
                     return true;
@@ -160,24 +159,24 @@ namespace Coroutines
         /// <summary>
         /// Reference to the routine's runner.
         /// </summary>
-        public readonly CoroutineRunner Runner;
+        internal readonly CoroutineRunner Runner;
 
         /// <summary>
         /// Reference to the routine's enumerator.
         /// </summary>
-        public readonly IEnumerator Enumerator;
+        internal readonly IEnumerator<object?> Enumerator;
 
         /// <summary>
         /// True if the enumerator is currently running.
         /// </summary>
-        public bool IsRunning => Runner.IsRunning(Enumerator);
+        public bool IsRunning => Runner.IsRunning(in this);
 
         /// <summary>
         /// Construct a coroutine. Never call this manually, only use return values from Coroutines.Run().
         /// </summary>
         /// <param name="runner">The routine's runner.</param>
         /// <param name="enumerator">The routine's enumerator.</param>
-        internal CoroutineHandle(CoroutineRunner runner, IEnumerator enumerator)
+        internal CoroutineHandle(CoroutineRunner runner, IEnumerator<object?> enumerator)
         {
             Runner = runner ?? throw new ArgumentNullException(nameof(runner));
             Enumerator = enumerator ?? throw new ArgumentNullException(nameof(runner));
@@ -187,15 +186,15 @@ namespace Coroutines
         /// Stop this coroutine if it is running.
         /// </summary>
         /// <returns>True if the coroutine was stopped.</returns>
-        public bool Stop() => IsRunning && Runner.Stop(Enumerator);
+        public bool Stop() => IsRunning && Runner.Stop(in this);
 
         /// <summary>
         /// A routine to wait until this coroutine has finished running.
         /// </summary>
         /// <returns>The wait enumerator.</returns>
-        public IEnumerator Wait()
+        public IEnumerator<object?> Wait()
         {
-            while (Runner.IsRunning(Enumerator))
+            while (Runner.IsRunning(in this))
                 yield return null;
         }
     }

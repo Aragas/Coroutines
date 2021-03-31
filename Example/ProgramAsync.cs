@@ -25,6 +25,8 @@ namespace Example
             //Routine to move horizontally
             async IAsyncEnumerator<object?> MoveXAsync(int amount, float stepTime)
             {
+                await Task.CompletedTask;
+
                 var dir = amount > 0 ? 1 : -1;
                 while (amount != 0)
                 {
@@ -37,6 +39,8 @@ namespace Example
             //Routine to move vertically
             async IAsyncEnumerator<object?> MoveYAsync(int amount, float stepTime)
             {
+                await Task.CompletedTask;
+
                 var dir = amount > 0 ? 1 : -1;
                 while (amount != 0)
                 {
@@ -49,6 +53,8 @@ namespace Example
             //Walk the little @ character on a path
             async IAsyncEnumerator<object?> MovementAsync()
             {
+                await Task.CompletedTask;
+
                 //Walk normally
                 yield return MoveXAsync(5, 0.25f);
                 yield return MoveYAsync(5, 0.25f);
